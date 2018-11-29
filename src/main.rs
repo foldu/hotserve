@@ -22,7 +22,9 @@ mod middleware;
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 fn run() -> Result<(), failure::Error> {
-    std::env::set_var("RUST_LOG", "hot_reload=info");
+    if let None = std::env::var_os("RUST_LOG") {
+        std::env::set_var("RUST_LOG", "hotserve=info");
+    }
     env_logger::init();
     let Opt {
         port,
