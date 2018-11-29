@@ -26,7 +26,7 @@ impl ScriptInjector {
                 switch(msg.cmd) {
                     case "reload":
                         ws.onclose = undefined;
-                        location.reload();
+                        location.reload(true);
                         break;
                 }
 
