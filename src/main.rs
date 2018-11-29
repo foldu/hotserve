@@ -18,6 +18,9 @@ use crate::middleware::ScriptInjector;
 
 mod middleware;
 
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 fn run() -> Result<(), failure::Error> {
     std::env::set_var("RUST_LOG", "hot_reload=info");
     env_logger::init();
