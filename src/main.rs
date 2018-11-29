@@ -7,11 +7,7 @@ use std::{
     },
 };
 
-use actix::{
-    ActorContext, ActorFuture, Addr, Arbiter, AsyncContext, Context, ContextFutureSpawner, Handler,
-    Message, Recipient, SyncArbiter, SyncContext, WrapFuture,
-};
-use actix_web::{fs::StaticFiles, server, ws, App, HttpRequest, HttpResponse};
+use actix_web::{actix::*, fs::StaticFiles, server, ws, App, HttpRequest, HttpResponse};
 use failure::format_err;
 use log::{error, info, warn};
 use notify::Watcher;
