@@ -19,9 +19,6 @@ use crate::middleware::ScriptInjector;
 
 mod middleware;
 
-#[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
-
 fn run() -> Result<(), failure::Error> {
     if let None = std::env::var_os("RUST_LOG") {
         std::env::set_var("RUST_LOG", "hotserve=info,actix_web=warn");
