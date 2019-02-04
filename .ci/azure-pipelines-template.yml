@@ -43,9 +43,9 @@ jobs:
     - task: PublishPipelineArtifact@0
       inputs:
         artifactName: ${{ parameters.name }}
-        targetPath: 'target/x86_64-unknown-linux-musl/release/hotserve'
+        targetPath: '$(System.DefaultWorkingDirectory)/target/x86_64-unknown-linux-musl/release/hotserve'
   - ${{ if ne(parameters.name, 'Linux') }}:
     - task: PublishPipelineArtifact@0
       inputs:
         artifactName: ${{ parameters.name }}
-        targetPath: 'target/release/hotserve'
+        targetPath: '$(System.DefaultWorkingDirectory)/target/release/hotserve'
