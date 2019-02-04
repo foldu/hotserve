@@ -8,9 +8,9 @@ jobs:
         rustup_toolchain: stable
   steps:
   - ${{ if ne(parameters.name, 'Windows') }}:
-    # Linux and macOS.
+    # Linux and macOS
     - script: |
-        curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
+        curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain ${RUSTUP_TOOLCHAIN}
         echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
       displayName: Install rust
   - ${{ if eq(parameters.name, 'Windows') }}:
@@ -21,11 +21,31 @@ jobs:
         set PATH=%PATH%;%USERPROFILE%\.cargo\bin
         echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
       displayName: Install rust (windows)
-  # All platforms.
+  - ${{ if eq(parameters.name, 'Linux') }}:
+    - script: |
+        sudo apt update
+        sudo apt install musl-dev musl-tools
+        rustup target add x86_64-unknown-linux-musl
+      displayName: Install musl
   - script: |
         rustc -Vv
         cargo -V
     displayName: Query rust and cargo versions
-  - script: |
-        cargo test
-    displayName: Run tests
+  - ${{ if ne(parameters.name, 'Linux') }}:
+    - script: |
+          cargo build --release
+      displayName: Build release
+  - ${{ if eq(parameters.name, 'Linux') }}:
+    - script: |
+          cargo build --release --target x86_64-unknown-linux-musl
+      displayName: Build release
+  - ${{ if eq(parameters.name, 'Linux') }}:
+    - task: PublishPipelineArtifact@0
+      input:
+        artifactName: {{ parameters.name }}
+        targetPath: 'target/x86_64-unknown-linux-musl/release/hotserve'
+  - ${{ if ne(parameters.name, 'Linux') }}:
+    - task: PublishPipelineArtifact@0
+      input:
+        artifactName: {{ parameters.name }}
+        targetPath: 'target/release/hotserve'
