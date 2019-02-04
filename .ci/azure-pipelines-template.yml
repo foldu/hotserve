@@ -42,10 +42,10 @@ jobs:
   - ${{ if eq(parameters.name, 'Linux') }}:
     - task: PublishPipelineArtifact@0
       input:
-        artifactName: {{ parameters.name }}
+        artifactName: ${{ parameters.name }}
         targetPath: 'target/x86_64-unknown-linux-musl/release/hotserve'
   - ${{ if ne(parameters.name, 'Linux') }}:
     - task: PublishPipelineArtifact@0
       input:
-        artifactName: {{ parameters.name }}
+        artifactName: ${{ parameters.name }}
         targetPath: 'target/release/hotserve'
