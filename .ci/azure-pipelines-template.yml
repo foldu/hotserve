@@ -41,11 +41,11 @@ jobs:
       displayName: Build release
   - ${{ if eq(parameters.name, 'Linux') }}:
     - task: PublishPipelineArtifact@0
-        input:
-          artifactName: ${{ parameters.name }}
-          targetPath: 'target/x86_64-unknown-linux-musl/release/hotserve'
+      inputs:
+        artifactName: ${{ parameters.name }}
+        targetPath: 'target/x86_64-unknown-linux-musl/release/hotserve'
   - ${{ if ne(parameters.name, 'Linux') }}:
     - task: PublishPipelineArtifact@0
-        input:
-          artifactName: ${{ parameters.name }}
-          targetPath: 'target/release/hotserve'
+      inputs:
+        artifactName: ${{ parameters.name }}
+        targetPath: 'target/release/hotserve'
