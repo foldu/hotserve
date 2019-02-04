@@ -5,11 +5,12 @@ use std::{
         mpsc::{channel, Receiver},
         Arc,
     },
+    time::{Duration, Instant},
 };
 
 use actix_web::{actix::*, fs::StaticFiles, server, ws, App, HttpRequest, HttpResponse};
 use failure::format_err;
-use log::{error, info, warn};
+use log::{error, info};
 use notify::Watcher;
 use serde_derive::{Deserialize, Serialize};
 use structopt::StructOpt;
@@ -23,7 +24,7 @@ static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 fn run() -> Result<(), failure::Error> {
     if let None = std::env::var_os("RUST_LOG") {
-        std::env::set_var("RUST_LOG", "hotserve=info");
+        std::env::set_var("RUST_LOG", "hotserve=info,actix_web=warn");
     }
     env_logger::init();
     let Opt {
@@ -65,6 +66,7 @@ fn run() -> Result<(), failure::Error> {
             )
         })
         .bind(format!("localhost:{}", port))
+        // FIXME: useless alloc
         .expect(&format!("Can't start server on port {}", port))
         .start();
         info!("Serving {} on localhost:{}", dir.display(), port);
@@ -105,7 +107,7 @@ impl DirWatcher {
         P: AsRef<Path>,
     {
         let (tx, rx) = channel();
-        let mut watcher = notify::watcher(tx, std::time::Duration::from_secs(10))?;
+        let mut watcher = notify::watcher(tx, std::time::Duration::from_millis(10))?;
         watcher.watch(watch_dir, notify::RecursiveMode::Recursive)?;
         Ok(Self {
             broker,
@@ -115,13 +117,45 @@ impl DirWatcher {
     }
 }
 
+#[derive(Default)]
+struct Timer {
+    stop: Option<Instant>,
+}
+
+impl Timer {
+    #[inline]
+    fn is_expired(&mut self) -> bool {
+        if let Some(stop) = self.stop {
+            if Instant::now() > stop {
+                self.stop = None;
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    #[inline]
+    fn set_timeout(&mut self, timeout: Duration) {
+        if let None = self.stop {
+            self.stop = Some(Instant::now() + timeout);
+        }
+    }
+}
+
 impl actix::Actor for DirWatcher {
     type Context = SyncContext<Self>;
 
     fn started(&mut self, _ctx: &mut Self::Context) {
         use notify::DebouncedEvent::*;
+        use std::sync::mpsc::RecvTimeoutError::*;
+
+        let mut timer = Timer::default();
+
         loop {
-            match self.rx.recv() {
+            match self.rx.recv_timeout(Duration::from_millis(50)) {
                 Ok(evt) => match evt {
                     NoticeWrite(path)
                     | NoticeRemove(path)
@@ -130,17 +164,21 @@ impl actix::Actor for DirWatcher {
                     | Chmod(path)
                     | Remove(path)
                     | Rename(path, _) => {
-                        info!("Noticed change on {}, reloading", path.display());
-                        self.broker.do_send(FsChange);
+                        info!("Noticed change on {}", path.display());
+                        timer.set_timeout(Duration::from_millis(200));
                     }
                     Rescan => {}
                     Error(e, _) => {
                         error!("Error while watching file: {}", e);
                     }
                 },
-                Err(e) => {
-                    warn!("Error while watching dir: {}", e);
+                Err(Timeout) => {
+                    if timer.is_expired() {
+                        info!("Reloading");
+                        self.broker.do_send(FsChange);
+                    }
                 }
+                Err(Disconnected) => panic!("Channel disconnected in fs watcher"),
             }
         }
     }
